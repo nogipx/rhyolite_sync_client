@@ -11,6 +11,7 @@ Future<void> main(List<String> args) async {
       '${Platform.environment['HOME']}/.obsidian-dev';
   final release = Platform.environment['RELEASE'] == '1';
   final dev = !release;
+  final useFvm = Platform.environment['USE_FVM'] != '0';
 
   // Parse extra --dart-define=KEY=VALUE from CLI args.
   final extraDefines = <String, String>{};
@@ -29,6 +30,7 @@ Future<void> main(List<String> args) async {
     outDir: outDir,
     pluginClass: 'RhyolitePlugin',
     release: release,
+    useFvm: useFvm,
     defines: {'rhyolite.dev': '$dev', ...extraDefines},
   );
 
