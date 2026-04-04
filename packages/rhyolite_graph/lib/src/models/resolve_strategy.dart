@@ -1,0 +1,1 @@
+enum ResolveStrategy { lww, conflictCopy }

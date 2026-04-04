@@ -1,0 +1,10 @@
+{
+  "id": "rhyolite-sync",
+  "name": "Rhyolite Sync",
+  "version": "1.0.0",
+  "minAppVersion": "1.4.0",
+  "description": "Syncs your vault across devices using end-to-end encryption. Requires a Rhyolite account and subscription.",
+  "author": "Karim Mamatkazin",
+  "authorUrl": "https://rhyolite.nogipx.dev",
+  "isDesktopOnly": false
+}

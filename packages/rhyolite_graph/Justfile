@@ -1,0 +1,3 @@
+# Generate sample graph HTML and open in browser
+viz:
+  fvm dart run tool/generate_viz.dart && open /tmp/rhyolite_graph.html

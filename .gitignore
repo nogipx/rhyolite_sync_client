@@ -1,0 +1,8 @@
+.dart_tool/
+.fvm/
+.vscode/
+.idea/
+.DS_Store
+*.iml
+*.sqlite*
+build/

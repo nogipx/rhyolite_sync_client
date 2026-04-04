@@ -1,0 +1,49 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: '3.11.0'
+
+      - name: Install dependencies
+        run: dart pub get
+
+      - name: Build plugin
+        working-directory: packages/client/rhyolite_client_obsidian
+        env:
+          RELEASE: '1'
+          OBSIDIAN_VAULT: /tmp/obsidian-build
+        run: |
+          dart run bin/build.dart \
+            --dart-define=ACCOUNT_SERVICE_URL=${{ secrets.ACCOUNT_SERVICE_URL }} \
+            --dart-define=SYNC_SERVICE_URL=${{ secrets.SYNC_SERVICE_URL }}
+
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          # Extract the section between this version header and the next
+          NOTES=$(awk "/^## \[${VERSION}\]/{found=1; next} found && /^## \[/{exit} found{print}" CHANGELOG.md)
+          # Write to file to preserve newlines
+          echo "$NOTES" > /tmp/release_notes.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          body_path: /tmp/release_notes.md
+          files: |
+            /tmp/obsidian-build/rhyolite-sync/main.js
+            manifest.json
+            sqlite3mc.wasm

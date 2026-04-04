@@ -1,0 +1,70 @@
+x-rpc-ref: &rpc-ref rpc_dart-2.6.2
+
+name: rhyolite_sync_plugin
+publish_to: none
+
+environment:
+  sdk: ^3.11.0
+
+workspace:
+  - packages/client/rhyolite_client_obsidian
+  - packages/client/rhyolite_client_core
+  - packages/client/rhyolite_client_account
+  - packages/rhyolite_graph
+
+dependency_overrides:
+  rpc_dart:
+    git:
+      url: https://github.com/nogipx/rpc_dart
+      path: packages/core/rpc_dart
+      ref: *rpc-ref
+  rpc_dart_http:
+    git:
+      url: https://github.com/nogipx/rpc_dart
+      path: packages/transport/rpc_dart_http
+      ref: *rpc-ref
+  rpc_dart_websocket:
+    git:
+      url: https://github.com/nogipx/rpc_dart
+      path: packages/transport/rpc_dart_websocket
+      ref: *rpc-ref
+  rpc_dart_compression:
+    git:
+      url: https://github.com/nogipx/rpc_dart
+      path: packages/core/rpc_dart_compression
+      ref: *rpc-ref
+  rpc_dart_generator:
+    git:
+      url: https://github.com/nogipx/rpc_dart
+      path: packages/core/rpc_dart_generator
+      ref: *rpc-ref
+  rpc_data:
+    git:
+      url: https://github.com/nogipx/rpc_dart
+      path: packages/data/rpc_data
+      ref: *rpc-ref
+  rpc_data_sqlite:
+    git:
+      url: https://github.com/nogipx/rpc_dart
+      path: packages/data/rpc_data_sqlite
+      ref: *rpc-ref
+  rpc_blob:
+    git:
+      url: https://github.com/nogipx/rpc_dart
+      path: packages/blob/rpc_blob
+      ref: *rpc-ref
+  rpc_blob_sqlite:
+    git:
+      url: https://github.com/nogipx/rpc_dart
+      path: packages/blob/rpc_blob_sqlite
+      ref: *rpc-ref
+  rpc_blob_minio:
+    git:
+      url: https://github.com/nogipx/rpc_dart
+      path: packages/blob/rpc_blob_minio
+      ref: *rpc-ref
+  rpc_notify:
+    git:
+      url: https://github.com/nogipx/rpc_dart
+      path: packages/notify/rpc_notify
+      ref: *rpc-ref
