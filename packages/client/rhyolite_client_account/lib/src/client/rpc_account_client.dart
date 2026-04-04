@@ -1,8 +1,5 @@
+import 'package:rhyolite_client_account/rhyolite_client_account.dart';
 import 'package:rpc_dart/rpc_dart.dart';
-
-import '../contract/auth_contract.dart';
-import '../contract/subscription_contract.dart';
-import '../contract/vault_contract.dart';
 
 /// RPC-based account client.
 ///
