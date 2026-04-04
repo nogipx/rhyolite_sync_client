@@ -54,14 +54,32 @@ jobs:
             --dart-define=ACCOUNT_SERVICE_URL=${{ secrets.ACCOUNT_SERVICE_URL }} \
             --dart-define=SYNC_SERVICE_URL=${{ secrets.SYNC_SERVICE_URL }}
 
+      - name: Compute artifact checksums
+        id: checksums
+        run: |
+          MAIN_JS_SHA=$(sha256sum /tmp/obsidian-build/rhyolite-sync/main.js | awk '{print $1}')
+          WASM_SHA=$(sha256sum sqlite3mc.wasm | awk '{print $1}')
+          echo "main_js_sha=$MAIN_JS_SHA" >> "$GITHUB_OUTPUT"
+          echo "wasm_sha=$WASM_SHA" >> "$GITHUB_OUTPUT"
+
       - name: Extract changelog for this version
         id: changelog
         run: |
           VERSION="${GITHUB_REF_NAME}"
-          # Extract the section between this version header and the next
           NOTES=$(awk "/^## \[${VERSION}\]/{found=1; next} found && /^## \[/{exit} found{print}" CHANGELOG.md)
-          # Write to file to preserve newlines
-          echo "$NOTES" > /tmp/release_notes.md
+          DART_SDK=$(dart --version 2>&1)
+          cat >> /tmp/release_notes.md << EOF
+          $NOTES
+
+          ---
+          
+          **Build environment**
+          \`\`\`
+          $DART_SDK
+          \`\`\`
+
+          To verify: clone tag \`${VERSION}\`, run \`RELEASE=1 USE_FVM=0 OBSIDIAN_VAULT=./build dart run bin/build.dart\` from \`packages/client/rhyolite_client_obsidian\`, compare SHA-256 of \`main.js\`.
+          EOF
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
