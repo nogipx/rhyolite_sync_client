@@ -23,6 +23,7 @@ jobs:
         working-directory: packages/client/rhyolite_client_obsidian
         env:
           RELEASE: '1'
+          USE_FVM: '0'
           OBSIDIAN_VAULT: /tmp/obsidian-build
         run: |
           dart run bin/build.dart \
