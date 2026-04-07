@@ -1,3 +1,10 @@
+## [1.1.1] - 2026-04-07
+
+### Other
+
+- add section about bundled sqlite3mc (obsidian)
+
+
 ## [1.1.0] - 2026-04-07
 
 ### Features

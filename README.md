@@ -44,6 +44,10 @@ No plaintext note content is ever sent to the server. All data is encrypted on y
 
 See our [Privacy Policy](https://rhyolite.nogipx.dev/privacy) for full details on data collection and handling.
 
+## Third-party components
+
+This plugin bundles [SQLite3 Multiple Ciphers](https://github.com/simolus3/sqlite3.dart/releases) (sqlite3mc) compiled to WebAssembly, used for local sync state storage. sqlite3mc is licensed under the MIT License.
+
 ## FAQ
 
 **Does it work on mobile (iOS/Android)?**
@@ -70,6 +74,10 @@ For text files (`.md`, `.txt`, etc.), the plugin first attempts an automatic 3-w
 If automatic merge fails:
 - **Last Write Wins** — the version with the later timestamp is kept, the other is discarded.
 - **Conflict Copy** — your local version stays in place, and the remote version is saved as a separate file named `filename (conflict copy YYYY-MM-DD).ext`.
+
+## License
+
+This plugin is licensed under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0).
 
 ## Support
 
