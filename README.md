@@ -7,6 +7,12 @@ Syncs your vault across devices using end-to-end encryption.
 
 ---
 
+> [!WARNING]
+> **Back up your vault before use.**
+> This plugin modifies files in your vault during sync. Make a full backup of your vault folder before connecting for the first time or upgrading to a new version.
+
+---
+
 ## Features
 
 - **End-to-end encrypted sync** — your notes are encrypted on-device before being sent to the server. The server never sees plaintext content.
