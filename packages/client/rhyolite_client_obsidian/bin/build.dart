@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 // ignore: implementation_imports
@@ -39,12 +40,16 @@ Future<void> main(List<String> args) async {
   await manifestSrc.copy(manifestDst.path);
   print('Copied manifest.json → ${manifestDst.path}');
 
-  final wasmSrc = File(
-    p.join(packageDir, 'sqlite3mc.wasm'),
+  // Inline sqlite3mc.wasm as base64 into main.js so no separate file is needed.
+  final wasmSrc = File(p.join(packageDir, 'sqlite3mc.wasm'));
+  final wasmBytes = await wasmSrc.readAsBytes();
+  final wasmB64 = base64Encode(wasmBytes);
+  final mainJs = File(p.join(outDir, 'rhyolite-sync', 'main.js'));
+  final mainJsContent = await mainJs.readAsString();
+  await mainJs.writeAsString(
+    '$mainJsContent\nglobalThis.__rhyoliteWasmB64="$wasmB64";',
   );
-  final wasmDst = File(p.join(outDir, 'rhyolite-sync', 'sqlite3mc.wasm'));
-  await wasmSrc.copy(wasmDst.path);
-  print('Copied sqlite3mc.wasm → ${wasmDst.path}');
+  print('Inlined sqlite3mc.wasm (${wasmBytes.length} bytes) into main.js');
 
   print('Build complete → $outDir/rhyolite-sync/');
 }

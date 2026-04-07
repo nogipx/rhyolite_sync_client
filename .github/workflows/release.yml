@@ -58,9 +58,7 @@ jobs:
         id: checksums
         run: |
           MAIN_JS_SHA=$(sha256sum /tmp/obsidian-build/rhyolite-sync/main.js | awk '{print $1}')
-          WASM_SHA=$(sha256sum sqlite3mc.wasm | awk '{print $1}')
           echo "main_js_sha=$MAIN_JS_SHA" >> "$GITHUB_OUTPUT"
-          echo "wasm_sha=$WASM_SHA" >> "$GITHUB_OUTPUT"
 
       - name: Extract changelog for this version
         id: changelog
@@ -89,4 +87,3 @@ jobs:
           files: |
             /tmp/obsidian-build/rhyolite-sync/main.js
             manifest.json
-            sqlite3mc.wasm

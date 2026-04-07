@@ -1,5 +1,6 @@
 // ignore_for_file: deprecated_member_use
 import 'dart:async';
+import 'dart:convert';
 import 'dart:js_util' as jsu;
 
 import 'package:obsidian_dart/obsidian_dart.dart';
@@ -39,6 +40,30 @@ bool _isSqliteCorrupt(Object error) {
     return true;
   }
   return false;
+}
+
+/// Returns a URI for the sqlite3mc wasm module.
+/// The wasm is inlined as base64 in main.js by the build script — decoded here
+/// and wrapped in a Blob URL so no separate file is needed.
+Uri _resolveWasmUri() {
+  final b64 =
+      jsu.getProperty<String?>(jsu.globalThis, '__rhyoliteWasmB64') ?? '';
+  final bytes = base64Decode(b64);
+  final jsBytes = jsu.jsify(bytes);
+  final blobConstructor = jsu.getProperty<Object>(jsu.globalThis, 'Blob');
+  final blob = jsu.callConstructor<Object>(
+    blobConstructor,
+    [
+      [jsBytes],
+      jsu.jsify({'type': 'application/wasm'}),
+    ],
+  );
+  final url = jsu.callMethod<String>(
+    jsu.getProperty<Object>(jsu.globalThis, 'URL'),
+    'createObjectURL',
+    [blob],
+  );
+  return Uri.parse(url);
 }
 
 void main() {
@@ -177,11 +202,7 @@ void main() {
 
           final pluginDir =
               plugin.manifestDir ?? '.obsidian/plugins/rhyolite-sync';
-          final wasmUri = Uri.parse(
-            plugin.app.vault.adapter.getResourcePath(
-              '$pluginDir/sqlite3mc.wasm',
-            ),
-          );
+          final wasmUri = _resolveWasmUri();
 
           final vaultId = cfg.vaultId;
           final raw = await plugin.loadData();
