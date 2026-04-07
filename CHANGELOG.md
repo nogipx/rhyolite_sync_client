@@ -1,3 +1,10 @@
+## [1.1.0] - 2026-04-07
+
+### Features
+
+- inline sqlite3mc.wasm as base64 in main.js (obsidian)
+
+
 ## [1.0.0] - 2026-04-05
 
 ### Features
