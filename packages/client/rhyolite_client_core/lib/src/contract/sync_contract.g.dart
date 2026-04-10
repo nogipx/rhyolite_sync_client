@@ -16,8 +16,10 @@ class SyncContractNames {
   static const push = 'push';
   static const acquireLock = 'acquireLock';
   static const releaseLock = 'releaseLock';
+  static const renewLock = 'renewLock';
   static const getVaultEpoch = 'getVaultEpoch';
   static const resetVault = 'resetVault';
+  static const deleteNodes = 'deleteNodes';
 }
 
 class SyncContractCodecs {
@@ -26,6 +28,10 @@ class SyncContractCodecs {
       RpcCodec<AcquireLockRequest>.withDecoder(AcquireLockRequest.fromJson);
   static const codecAcquireLockResponse =
       RpcCodec<AcquireLockResponse>.withDecoder(AcquireLockResponse.fromJson);
+  static const codecDeleteNodesRequest =
+      RpcCodec<DeleteNodesRequest>.withDecoder(DeleteNodesRequest.fromJson);
+  static const codecDeleteNodesResponse =
+      RpcCodec<DeleteNodesResponse>.withDecoder(DeleteNodesResponse.fromJson);
   static const codecGetVaultEpochRequest =
       RpcCodec<GetVaultEpochRequest>.withDecoder(GetVaultEpochRequest.fromJson);
   static const codecGetVaultEpochResponse =
@@ -48,6 +54,10 @@ class SyncContractCodecs {
       RpcCodec<ReleaseLockRequest>.withDecoder(ReleaseLockRequest.fromJson);
   static const codecReleaseLockResponse =
       RpcCodec<ReleaseLockResponse>.withDecoder(ReleaseLockResponse.fromJson);
+  static const codecRenewLockRequest =
+      RpcCodec<RenewLockRequest>.withDecoder(RenewLockRequest.fromJson);
+  static const codecRenewLockResponse =
+      RpcCodec<RenewLockResponse>.withDecoder(RenewLockResponse.fromJson);
   static const codecResetVaultRequest = RpcCodec<ResetVaultRequest>.withDecoder(
     ResetVaultRequest.fromJson,
   );
@@ -117,6 +127,20 @@ class SyncContractCaller extends RpcCallerContract implements ISyncContract {
   }
 
   @override
+  Future<RenewLockResponse> renewLock(
+    RenewLockRequest request, {
+    RpcContext? context,
+  }) {
+    return callUnary<RenewLockRequest, RenewLockResponse>(
+      methodName: SyncContractNames.renewLock,
+      requestCodec: SyncContractCodecs.codecRenewLockRequest,
+      responseCodec: SyncContractCodecs.codecRenewLockResponse,
+      request: request,
+      context: context,
+    );
+  }
+
+  @override
   Future<GetVaultEpochResponse> getVaultEpoch(
     GetVaultEpochRequest request, {
     RpcContext? context,
@@ -139,6 +163,20 @@ class SyncContractCaller extends RpcCallerContract implements ISyncContract {
       methodName: SyncContractNames.resetVault,
       requestCodec: SyncContractCodecs.codecResetVaultRequest,
       responseCodec: SyncContractCodecs.codecResetVaultResponse,
+      request: request,
+      context: context,
+    );
+  }
+
+  @override
+  Future<DeleteNodesResponse> deleteNodes(
+    DeleteNodesRequest request, {
+    RpcContext? context,
+  }) {
+    return callUnary<DeleteNodesRequest, DeleteNodesResponse>(
+      methodName: SyncContractNames.deleteNodes,
+      requestCodec: SyncContractCodecs.codecDeleteNodesRequest,
+      responseCodec: SyncContractCodecs.codecDeleteNodesResponse,
       request: request,
       context: context,
     );
@@ -181,6 +219,12 @@ abstract class SyncContractResponder extends RpcResponderContract
       requestCodec: SyncContractCodecs.codecReleaseLockRequest,
       responseCodec: SyncContractCodecs.codecReleaseLockResponse,
     );
+    addUnaryMethod<RenewLockRequest, RenewLockResponse>(
+      methodName: SyncContractNames.renewLock,
+      handler: renewLock,
+      requestCodec: SyncContractCodecs.codecRenewLockRequest,
+      responseCodec: SyncContractCodecs.codecRenewLockResponse,
+    );
     addUnaryMethod<GetVaultEpochRequest, GetVaultEpochResponse>(
       methodName: SyncContractNames.getVaultEpoch,
       handler: getVaultEpoch,
@@ -192,6 +236,12 @@ abstract class SyncContractResponder extends RpcResponderContract
       handler: resetVault,
       requestCodec: SyncContractCodecs.codecResetVaultRequest,
       responseCodec: SyncContractCodecs.codecResetVaultResponse,
+    );
+    addUnaryMethod<DeleteNodesRequest, DeleteNodesResponse>(
+      methodName: SyncContractNames.deleteNodes,
+      handler: deleteNodes,
+      requestCodec: SyncContractCodecs.codecDeleteNodesRequest,
+      responseCodec: SyncContractCodecs.codecDeleteNodesResponse,
     );
   }
 }

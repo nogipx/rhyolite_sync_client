@@ -47,6 +47,17 @@ class TestIO implements IPlatformIO {
   }
 
   @override
+  Future<FileStatInfo?> statFile(String path) async {
+    final file = File(path);
+    if (!file.existsSync()) return null;
+    final stat = file.statSync();
+    return FileStatInfo(
+      mtimeMs: stat.modified.millisecondsSinceEpoch,
+      sizeBytes: stat.size,
+    );
+  }
+
+  @override
   Future<void> deleteEmptyDirsUpTo(String dirPath, String stopAt) async {
     var current = dirPath;
     while (current != stopAt && current.startsWith(stopAt)) {

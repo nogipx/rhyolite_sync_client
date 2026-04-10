@@ -2,7 +2,7 @@ import 'package:data_manage/data_manage.dart';
 import 'package:rhyolite_graph/rhyolite_graph.dart';
 
 class PullUseCase {
-  final IGraphEditable<NodeRecord> graph;
+  final IGraph<NodeRecord> graph;
   final IGraphServer server;
 
   const PullUseCase({required this.graph, required this.server});
@@ -32,7 +32,6 @@ class PullUseCase {
 
       for (final filePullResult in batchResults) {
         if (filePullResult.nodes.isNotEmpty) {
-          ApplyRemoteNodesUseCase(graph)(filePullResult.nodes);
           result.add(filePullResult);
         }
       }

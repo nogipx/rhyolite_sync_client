@@ -148,7 +148,9 @@ class ConflictResolver {
       final localBytes = await localBlobStore.read(localChange.blobId, vaultId: vaultId);
       if (localBytes == null) return null;
 
-      final remoteBytes = (await remoteBlobStorage.download([remoteChange.blobId]))[remoteChange.blobId]!;
+      final remoteMap = await remoteBlobStorage.download([remoteChange.blobId]);
+      final remoteBytes = remoteMap[remoteChange.blobId];
+      if (remoteBytes == null) return null;
       final localText = utf8.decode(localBytes, allowMalformed: true);
       final remoteText = utf8.decode(remoteBytes, allowMalformed: true);
 
@@ -160,8 +162,12 @@ class ConflictResolver {
         if (cur == null) break;
         final rec = graph.getNodeData(cur.key);
         if (rec is ChangeRecord && rec.isSynced) {
-          final baseBytes = await localBlobStore.read(rec.blobId, vaultId: vaultId)
-              ?? (await remoteBlobStorage.download([rec.blobId]))[rec.blobId]!;
+          final localBase = await localBlobStore.read(rec.blobId, vaultId: vaultId);
+          final baseMap = localBase == null
+              ? await remoteBlobStorage.download([rec.blobId])
+              : null;
+          final baseBytes = localBase ?? baseMap?[rec.blobId];
+          if (baseBytes == null) break;
           baseText = utf8.decode(baseBytes, allowMalformed: true);
           break;
         }
@@ -241,7 +247,11 @@ class ConflictResolver {
     ChangeRecord remoteChange,
     List<NodeRecord> pulledRecords,
   ) async {
-    if (remoteChange.createdAt.isAfter(localChange.createdAt)) {
+    final remoteMs = remoteChange.serverTimestampMs ??
+        remoteChange.createdAt.millisecondsSinceEpoch;
+    final localMs = localChange.serverTimestampMs ??
+        localChange.createdAt.millisecondsSinceEpoch;
+    if (remoteMs > localMs) {
       // Remote wins — prune local branch and write remote content to disk normally.
       _pruneLocalBranch(localChange);
       return ConflictResolution(recordsForDisk: pulledRecords, newLocalRecords: []);
@@ -280,7 +290,11 @@ class ConflictResolver {
     List<NodeRecord> pulledRecords,
     String relativePath,
   ) async {
-    final remoteBytes = (await remoteBlobStorage.download([remoteChange.blobId]))[remoteChange.blobId]!;
+    final remoteMap = await remoteBlobStorage.download([remoteChange.blobId]);
+    final remoteBytes = remoteMap[remoteChange.blobId];
+    if (remoteBytes == null) {
+      return ConflictResolution(recordsForDisk: pulledRecords, newLocalRecords: []);
+    }
 
     final dir = p.dirname(relativePath);
     final basename = p.basenameWithoutExtension(relativePath);
@@ -339,17 +353,23 @@ class ConflictResolver {
     );
   }
 
-  /// Removes the chain of unsynced local nodes from [localChange] up to (but
-  /// not including) the first synced ancestor. This eliminates the losing
-  /// branch after a conflict resolution so the graph stays linear.
+  /// Detaches the losing local branch from the graph by removing the edge
+  /// between the first synced ancestor and the first unsynced node.
+  /// The detached subtree becomes orphaned and will be removed by GC.
   void _pruneLocalBranch(ChangeRecord localChange) {
+    // Walk up to find the bottom-most unsynced node and its synced parent.
     Node? node = graph.getNodeByKey(localChange.key);
+    Node? firstUnsynced;
     while (node != null) {
       final record = graph.getNodeData(node.key);
       if (record is! ChangeRecord || record.isSynced) break;
-      final parent = graph.getNodeParent(node);
-      graph.removeNode(node);
-      node = parent;
+      firstUnsynced = node;
+      node = graph.getNodeParent(node);
+    }
+    // node is now the synced ancestor; firstUnsynced is the branch root.
+    if (node != null && firstUnsynced != null) {
+      graph.removeEdge(node, firstUnsynced);
+      GraphGCUseCase(graph).call().apply(graph);
     }
   }
 

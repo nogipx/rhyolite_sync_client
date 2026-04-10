@@ -8,6 +8,11 @@ sealed class NodeRecord implements IRpcSerializable {
   final bool isSynced;
   final DateTime createdAt;
 
+  /// Timestamp assigned by the server when the record was first stored.
+  /// Null for locally-created records that have not yet been synced.
+  /// Used as authoritative ordering in [findLeaf] and LWW conflict resolution.
+  final int? serverTimestampMs;
+
   const NodeRecord({
     required this.type,
     required this.key,
@@ -15,6 +20,7 @@ sealed class NodeRecord implements IRpcSerializable {
     this.parentKey,
     required this.isSynced,
     required this.createdAt,
+    this.serverTimestampMs,
   });
 
   static NodeRecord fromJson(Map<String, dynamic> json) {
@@ -43,6 +49,7 @@ sealed class NodeRecord implements IRpcSerializable {
 
   NodeRecord withSynced();
   NodeRecord withUnsynced();
+  NodeRecord withOrphaned() => this;
   Map<String, dynamic> toLocalJson();
 
   Map<String, dynamic> _baseJson() => {
@@ -51,6 +58,7 @@ sealed class NodeRecord implements IRpcSerializable {
     'vaultId': vaultId,
     'createdAt': createdAt.toIso8601String(),
     if (parentKey != null) 'parentKey': parentKey,
+    if (serverTimestampMs != null) 'serverTimestampMs': serverTimestampMs,
   };
 
   Map<String, dynamic> _baseLocalJson() => {
@@ -71,6 +79,7 @@ class VaultRecord extends NodeRecord {
     super.parentKey,
     super.isSynced = false,
     required super.createdAt,
+    super.serverTimestampMs,
     required this.name,
     this.encryptedPayload,
   }) : super(type: nodeType);
@@ -81,6 +90,7 @@ class VaultRecord extends NodeRecord {
     parentKey: json['parentKey'] as String?,
     isSynced: true,
     createdAt: DateTime.parse(json['createdAt'] as String),
+    serverTimestampMs: json['serverTimestampMs'] as int?,
     name: json['name'] as String,
     encryptedPayload: json['encryptedPayload'] as String?,
   );
@@ -91,6 +101,7 @@ class VaultRecord extends NodeRecord {
     parentKey: json['parentKey'] as String?,
     isSynced: json['isSynced'] as bool,
     createdAt: DateTime.parse(json['createdAt'] as String),
+    serverTimestampMs: json['serverTimestampMs'] as int?,
     name: json['name'] as String,
     encryptedPayload: json['encryptedPayload'] as String?,
   );
@@ -102,6 +113,7 @@ class VaultRecord extends NodeRecord {
     parentKey: parentKey,
     isSynced: true,
     createdAt: createdAt,
+    serverTimestampMs: serverTimestampMs,
     name: name,
     encryptedPayload: encryptedPayload,
   );
@@ -113,6 +125,7 @@ class VaultRecord extends NodeRecord {
     parentKey: parentKey,
     isSynced: false,
     createdAt: createdAt,
+    serverTimestampMs: serverTimestampMs,
     name: name,
     encryptedPayload: encryptedPayload,
   );
@@ -140,6 +153,7 @@ class FileRecord extends NodeRecord {
     super.parentKey,
     super.isSynced = false,
     required super.createdAt,
+    super.serverTimestampMs,
     required this.fileId,
     required this.path,
     this.encryptedPayload,
@@ -151,6 +165,7 @@ class FileRecord extends NodeRecord {
     parentKey: json['parentKey'] as String?,
     isSynced: true,
     createdAt: DateTime.parse(json['createdAt'] as String),
+    serverTimestampMs: json['serverTimestampMs'] as int?,
     fileId: json['fileId'] as String,
     path: json['path'] as String? ?? '',
     encryptedPayload: json['encryptedPayload'] as String?,
@@ -162,6 +177,7 @@ class FileRecord extends NodeRecord {
     parentKey: json['parentKey'] as String?,
     isSynced: json['isSynced'] as bool,
     createdAt: DateTime.parse(json['createdAt'] as String),
+    serverTimestampMs: json['serverTimestampMs'] as int?,
     fileId: json['fileId'] as String,
     path: json['path'] as String,
   );
@@ -173,6 +189,7 @@ class FileRecord extends NodeRecord {
     parentKey: parentKey,
     isSynced: true,
     createdAt: createdAt,
+    serverTimestampMs: serverTimestampMs,
     fileId: fileId,
     path: path,
     encryptedPayload: encryptedPayload,
@@ -185,6 +202,7 @@ class FileRecord extends NodeRecord {
     parentKey: parentKey,
     isSynced: false,
     createdAt: createdAt,
+    serverTimestampMs: serverTimestampMs,
     fileId: fileId,
     path: path,
     encryptedPayload: encryptedPayload,
@@ -220,6 +238,7 @@ class ChangeRecord extends NodeRecord {
     super.parentKey,
     super.isSynced = false,
     required super.createdAt,
+    super.serverTimestampMs,
     required this.fileId,
     required this.blobId,
     required this.sizeBytes,
@@ -232,6 +251,7 @@ class ChangeRecord extends NodeRecord {
     parentKey: json['parentKey'] as String?,
     isSynced: true,
     createdAt: DateTime.parse(json['createdAt'] as String),
+    serverTimestampMs: json['serverTimestampMs'] as int?,
     fileId: json['fileId'] as String,
     blobId: json['blobId'] as String,
     sizeBytes: 0,
@@ -244,6 +264,7 @@ class ChangeRecord extends NodeRecord {
     parentKey: json['parentKey'] as String?,
     isSynced: json['isSynced'] as bool,
     createdAt: DateTime.parse(json['createdAt'] as String),
+    serverTimestampMs: json['serverTimestampMs'] as int?,
     fileId: json['fileId'] as String,
     blobId: json['blobId'] as String,
     sizeBytes: json['sizeBytes'] as int,
@@ -256,6 +277,7 @@ class ChangeRecord extends NodeRecord {
     parentKey: parentKey,
     isSynced: true,
     createdAt: createdAt,
+    serverTimestampMs: serverTimestampMs,
     fileId: fileId,
     blobId: blobId,
     sizeBytes: sizeBytes,
@@ -269,6 +291,21 @@ class ChangeRecord extends NodeRecord {
     parentKey: parentKey,
     isSynced: false,
     createdAt: createdAt,
+    serverTimestampMs: serverTimestampMs,
+    fileId: fileId,
+    blobId: blobId,
+    sizeBytes: sizeBytes,
+    encryptedPayload: encryptedPayload,
+  );
+
+  @override
+  ChangeRecord withOrphaned() => ChangeRecord(
+    key: key,
+    vaultId: vaultId,
+    parentKey: null,
+    isSynced: isSynced,
+    createdAt: createdAt,
+    serverTimestampMs: serverTimestampMs,
     fileId: fileId,
     blobId: blobId,
     sizeBytes: sizeBytes,
@@ -306,6 +343,7 @@ class MoveRecord extends NodeRecord {
     super.parentKey,
     super.isSynced = false,
     required super.createdAt,
+    super.serverTimestampMs,
     required this.fileId,
     required this.fromPath,
     required this.toPath,
@@ -318,6 +356,7 @@ class MoveRecord extends NodeRecord {
     parentKey: json['parentKey'] as String?,
     isSynced: true,
     createdAt: DateTime.parse(json['createdAt'] as String),
+    serverTimestampMs: json['serverTimestampMs'] as int?,
     fileId: json['fileId'] as String,
     fromPath: json['fromPath'] as String? ?? '',
     toPath: json['toPath'] as String? ?? '',
@@ -330,6 +369,7 @@ class MoveRecord extends NodeRecord {
     parentKey: json['parentKey'] as String?,
     isSynced: json['isSynced'] as bool,
     createdAt: DateTime.parse(json['createdAt'] as String),
+    serverTimestampMs: json['serverTimestampMs'] as int?,
     fileId: json['fileId'] as String,
     fromPath: json['fromPath'] as String,
     toPath: json['toPath'] as String,
@@ -342,6 +382,7 @@ class MoveRecord extends NodeRecord {
     parentKey: parentKey,
     isSynced: true,
     createdAt: createdAt,
+    serverTimestampMs: serverTimestampMs,
     fileId: fileId,
     fromPath: fromPath,
     toPath: toPath,
@@ -355,6 +396,21 @@ class MoveRecord extends NodeRecord {
     parentKey: parentKey,
     isSynced: false,
     createdAt: createdAt,
+    serverTimestampMs: serverTimestampMs,
+    fileId: fileId,
+    fromPath: fromPath,
+    toPath: toPath,
+    encryptedPayload: encryptedPayload,
+  );
+
+  @override
+  MoveRecord withOrphaned() => MoveRecord(
+    key: key,
+    vaultId: vaultId,
+    parentKey: null,
+    isSynced: isSynced,
+    createdAt: createdAt,
+    serverTimestampMs: serverTimestampMs,
     fileId: fileId,
     fromPath: fromPath,
     toPath: toPath,
@@ -389,6 +445,7 @@ class DeleteRecord extends NodeRecord {
     super.parentKey,
     super.isSynced = false,
     required super.createdAt,
+    super.serverTimestampMs,
     required this.fileId,
   }) : super(type: nodeType);
 
@@ -398,6 +455,7 @@ class DeleteRecord extends NodeRecord {
     parentKey: json['parentKey'] as String?,
     isSynced: true,
     createdAt: DateTime.parse(json['createdAt'] as String),
+    serverTimestampMs: json['serverTimestampMs'] as int?,
     fileId: json['fileId'] as String,
   );
 
@@ -407,6 +465,7 @@ class DeleteRecord extends NodeRecord {
     parentKey: json['parentKey'] as String?,
     isSynced: json['isSynced'] as bool,
     createdAt: DateTime.parse(json['createdAt'] as String),
+    serverTimestampMs: json['serverTimestampMs'] as int?,
     fileId: json['fileId'] as String,
   );
 
@@ -417,6 +476,7 @@ class DeleteRecord extends NodeRecord {
     parentKey: parentKey,
     isSynced: true,
     createdAt: createdAt,
+    serverTimestampMs: serverTimestampMs,
     fileId: fileId,
   );
 
@@ -427,6 +487,18 @@ class DeleteRecord extends NodeRecord {
     parentKey: parentKey,
     isSynced: false,
     createdAt: createdAt,
+    serverTimestampMs: serverTimestampMs,
+    fileId: fileId,
+  );
+
+  @override
+  DeleteRecord withOrphaned() => DeleteRecord(
+    key: key,
+    vaultId: vaultId,
+    parentKey: null,
+    isSynced: isSynced,
+    createdAt: createdAt,
+    serverTimestampMs: serverTimestampMs,
     fileId: fileId,
   );
 

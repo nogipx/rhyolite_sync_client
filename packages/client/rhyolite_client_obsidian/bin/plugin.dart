@@ -51,13 +51,10 @@ Uri _resolveWasmUri() {
   final bytes = base64Decode(b64);
   final jsBytes = jsu.jsify(bytes);
   final blobConstructor = jsu.getProperty<Object>(jsu.globalThis, 'Blob');
-  final blob = jsu.callConstructor<Object>(
-    blobConstructor,
-    [
-      [jsBytes],
-      jsu.jsify({'type': 'application/wasm'}),
-    ],
-  );
+  final blob = jsu.callConstructor<Object>(blobConstructor, [
+    [jsBytes],
+    jsu.jsify({'type': 'application/wasm'}),
+  ]);
   final url = jsu.callMethod<String>(
     jsu.getProperty<Object>(jsu.globalThis, 'URL'),
     'createObjectURL',
@@ -240,6 +237,7 @@ void main() {
             blobStore: LocalBlobStore(blobRepo),
             io: ObsidianIO(plugin.app.vault),
             changeProvider: ObsidianChangeProvider(plugin),
+            rateLimiter: RateLimiter(maxPerSecond: 40),
           );
           _engine = engine;
 
@@ -300,7 +298,9 @@ void main() {
           );
 
           if (cipher == null) {
-            _log.info('No vault key — sync disabled. Sign in and connect a vault.');
+            _log.info(
+              'No vault key — sync disabled. Sign in and connect a vault.',
+            );
           } else if (kEnv.syncServiceUrl.isEmpty) {
             _log.info('Server URL not set — sync disabled.');
           } else {
@@ -427,6 +427,10 @@ void _registerSettings({
     onResetVault: () async {
       await engine.triggerReset();
       _log.info('Vault reset initiated');
+    },
+    onRepairVault: () async {
+      await engine.triggerRepair();
+      _log.info('Vault repair initiated');
     },
   );
 }

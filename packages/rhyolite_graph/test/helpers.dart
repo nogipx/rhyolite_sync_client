@@ -71,10 +71,16 @@ class MockGraphServer implements IGraphServer {
   Future<void> releaseLock(String vaultId, String lockToken) async => lockReleased = true;
 
   @override
+  Future<void> renewLock(String vaultId, String lockToken) async {}
+
+  @override
   Future<int> getVaultEpoch() async => 0;
 
   @override
   Future<void> resetVault() async {}
+
+  @override
+  Future<void> deleteNodes(List<String> keys) async {}
 }
 
 class MockBlobStorage implements IBlobStorage {

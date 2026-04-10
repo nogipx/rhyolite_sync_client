@@ -51,7 +51,9 @@ class DiskApplier {
               bytes = cached;
             } else if (remoteBlobStorage != null) {
               final map = await remoteBlobStorage!.download([record.blobId]);
-              bytes = map[record.blobId]!;
+              final downloaded = map[record.blobId];
+              if (downloaded == null) continue;
+              bytes = downloaded;
               await localBlobStore.write(bytes, record.blobId, vaultId: vaultId);
             } else {
               continue;

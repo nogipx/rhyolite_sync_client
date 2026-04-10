@@ -41,6 +41,11 @@ class RemoteGraphServer implements IGraphServer {
   }
 
   @override
+  Future<void> deleteNodes(List<String> keys) async {
+    await _caller.deleteNodes(DeleteNodesRequest(vaultId: vaultId, keys: keys));
+  }
+
+  @override
   Future<String> acquireLock(String vaultId) async {
     final response = await _caller.acquireLock(
       AcquireLockRequest(vaultId: vaultId),
@@ -52,6 +57,13 @@ class RemoteGraphServer implements IGraphServer {
   Future<void> releaseLock(String vaultId, String lockToken) async {
     await _caller.releaseLock(
       ReleaseLockRequest(vaultId: vaultId, lockToken: lockToken),
+    );
+  }
+
+  @override
+  Future<void> renewLock(String vaultId, String lockToken) async {
+    await _caller.renewLock(
+      RenewLockRequest(vaultId: vaultId, lockToken: lockToken),
     );
   }
 

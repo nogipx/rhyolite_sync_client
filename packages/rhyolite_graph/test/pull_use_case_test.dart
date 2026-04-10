@@ -16,7 +16,7 @@ void main() {
       expect(result, isEmpty);
     });
 
-    test('returns and applies remote nodes when server has new nodes', () async {
+    test('returns remote nodes without applying them to the graph', () async {
       final r = buildStandardGraph();
       final remoteNodes = <NodeRecord>[
         ChangeRecord(key: 'c5', vaultId: 'v1', parentKey: 'c4', isSynced: true, createdAt: now.add(Duration(seconds: 5)), fileId: 'f1', blobId: 'b5', sizeBytes: 50),
@@ -26,7 +26,7 @@ void main() {
       final result = await PullUseCase(graph: r.graph, server: server)([r.fileNode]);
 
       expect(result.single.nodes, equals(remoteNodes));
-      expect(r.graph.containsNode('c5'), isTrue);
+      expect(r.graph.containsNode('c5'), isFalse);
     });
 
     test('passes correct fileId and lastSyncedKey to server', () async {
@@ -95,8 +95,14 @@ class _CapturingServer implements IGraphServer {
   Future<void> releaseLock(String vaultId, String lockToken) async {}
 
   @override
+  Future<void> renewLock(String vaultId, String lockToken) async {}
+
+  @override
   Future<int> getVaultEpoch() async => 0;
 
   @override
   Future<void> resetVault() async {}
+
+  @override
+  Future<void> deleteNodes(List<String> keys) async {}
 }

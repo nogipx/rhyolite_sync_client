@@ -12,17 +12,19 @@ class GraphBuilder {
     final graph = Graph<NodeRecord>(root: vaultNode);
     graph.updateNodeData(vaultRecord.key, vaultRecord);
 
-    final rest = records.where((r) => r is! VaultRecord).toList()
-      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    final rest = records.where((r) => r is! VaultRecord).toList();
 
     for (final record in rest) {
       final node = _nodeFromRecord(record);
       graph.addNode(node);
       graph.updateNodeData(record.key, record);
+    }
 
+    for (final record in rest) {
       if (record.parentKey != null) {
         final parent = graph.getNodeByKey(record.parentKey!);
         if (parent != null) {
+          final node = _nodeFromRecord(record);
           graph.addEdge(parent, node);
         }
       }
@@ -32,10 +34,10 @@ class GraphBuilder {
   }
 
   Node _nodeFromRecord(NodeRecord record) => switch (record) {
-        VaultRecord() => VaultNode(record.key),
-        FileRecord() => FileNode(record.key),
-        ChangeRecord() => ChangeNode(record.key),
-        MoveRecord() => MoveNode(record.key),
-        DeleteRecord() => DeleteNode(record.key),
-      };
+    VaultRecord() => VaultNode(record.key),
+    FileRecord() => FileNode(record.key),
+    ChangeRecord() => ChangeNode(record.key),
+    MoveRecord() => MoveNode(record.key),
+    DeleteRecord() => DeleteNode(record.key),
+  };
 }

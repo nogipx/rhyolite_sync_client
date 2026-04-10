@@ -1,4 +1,4 @@
-x-rpc-ref: &rpc-ref rpc_dart-2.6.2
+x-rpc-ref: &rpc-ref rpc_notify-1.1.0
 
 name: rhyolite_sync_plugin
 publish_to: none
@@ -66,5 +66,5 @@ dependency_overrides:
   rpc_notify:
     git:
       url: https://github.com/nogipx/rpc_dart
-      path: packages/notify/rpc_notify
+      path: packages/others/rpc_notify
       ref: *rpc-ref

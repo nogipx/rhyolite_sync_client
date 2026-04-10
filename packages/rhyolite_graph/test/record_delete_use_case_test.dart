@@ -5,15 +5,6 @@ import 'helpers.dart';
 
 void main() {
   group('RecordDeleteUseCase', () {
-    test('adds DeleteNode to graph after current leaf', () {
-      final r = buildStandardGraph();
-      RecordDeleteUseCase(r.graph)(r.fileNode);
-
-      final leaf = r.graph.findLeaf(r.fileNode);
-      expect(r.graph.getNodeData(leaf.key), isA<DeleteRecord>());
-      expect(r.graph.getNodeParent(leaf), equals(r.c4));
-    });
-
     test('returns DeleteRecord with correct fields', () {
       final r = buildStandardGraph();
       final result = RecordDeleteUseCase(r.graph)(r.fileNode);
@@ -27,6 +18,7 @@ void main() {
       final useCase = RecordDeleteUseCase(r.graph);
 
       final first = useCase(r.fileNode);
+      r.graph.apply([first]);
       final second = useCase(r.fileNode);
 
       expect(second.parentKey, equals(first.key));

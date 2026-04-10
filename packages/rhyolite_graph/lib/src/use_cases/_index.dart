@@ -1,7 +1,6 @@
 export 'find_lca_use_case.dart';
 export 'find_last_synced_use_case.dart';
 export 'get_unsynced_nodes_use_case.dart';
-export 'apply_remote_nodes_use_case.dart';
 export 'detect_conflict_use_case.dart';
 export 'resolve_structural_conflict_use_case.dart';
 export 'resolve_content_conflict_use_case.dart';
@@ -11,3 +10,4 @@ export 'record_change_use_case.dart';
 export 'record_move_use_case.dart';
 export 'record_delete_use_case.dart';
 export 'graph_gc_use_case.dart';
+export 'prune_leaf_branches_use_case.dart';

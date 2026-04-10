@@ -1,3 +1,5 @@
+import 'package:rhyolite_graph/rhyolite_graph.dart';
+
 sealed class SyncEngineEvent {
   SyncEngineEvent() : timestamp = DateTime.now();
 
@@ -94,4 +96,13 @@ class SyncSessionExpired extends SyncEngineEvent {
 /// application should prompt the user to renew their subscription.
 class SyncSubscriptionExpired extends SyncEngineEvent {
   SyncSubscriptionExpired();
+}
+
+/// Emitted after pruning losing conflict branches. Carries orphaned root
+/// records (with parentKey = null) that must be pushed to the server so it
+/// can tombstone them and stop returning them in future pulls.
+class SyncOrphanedNodes extends SyncEngineEvent {
+  SyncOrphanedNodes(this.records);
+
+  final List<NodeRecord> records;
 }

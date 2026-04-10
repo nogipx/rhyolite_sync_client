@@ -8,11 +8,13 @@ void main() {
   group('PushUseCase', () {
     test('does nothing when no unsynced nodes', () async {
       final r = buildStandardGraph();
-      r.graph.updateNodeData('c3', (r.graph.getNodeData('c3') as ChangeRecord).withSynced());
-      r.graph.updateNodeData('c4', (r.graph.getNodeData('c4') as ChangeRecord).withSynced());
+      r.graph.markSynced([
+        (r.graph.getNodeData('c3') as ChangeRecord).withSynced(),
+        (r.graph.getNodeData('c4') as ChangeRecord).withSynced(),
+      ]);
 
       final server = MockGraphServer();
-      await PushUseCase(
+      final synced = await PushUseCase(
         graph: r.graph,
         server: server,
         localBlobs: MockBlobStorage(),
@@ -20,6 +22,7 @@ void main() {
       )([r.fileNode]);
 
       expect(server.pushedNodes, isNull);
+      expect(synced, isEmpty);
     });
 
     test('pushes unsynced nodes to server in correct order', () async {
@@ -58,7 +61,26 @@ void main() {
       expect(remoteBlobs.store.length, equals(2));
     });
 
-    test('marks pushed nodes as synced in graph', () async {
+    test('returns synced versions of pushed records', () async {
+      final r = buildStandardGraph();
+      final localBlobs = MockBlobStorage({
+        'blob3': Uint8List.fromList([1]),
+        'blob4': Uint8List.fromList([2]),
+      });
+
+      final synced = await PushUseCase(
+        graph: r.graph,
+        server: MockGraphServer(),
+        localBlobs: localBlobs,
+        remoteBlobs: MockBlobStorage(),
+      )([r.fileNode]);
+
+      expect(synced.length, equals(2));
+      expect(synced.every((r) => r.isSynced), isTrue);
+      expect(synced.map((r) => r.key), containsAll(['c3', 'c4']));
+    });
+
+    test('graph is not mutated by push', () async {
       final r = buildStandardGraph();
       final localBlobs = MockBlobStorage({
         'blob3': Uint8List.fromList([1]),
@@ -72,8 +94,8 @@ void main() {
         remoteBlobs: MockBlobStorage(),
       )([r.fileNode]);
 
-      expect((r.graph.getNodeData('c3') as ChangeRecord).isSynced, isTrue);
-      expect((r.graph.getNodeData('c4') as ChangeRecord).isSynced, isTrue);
+      expect((r.graph.getNodeData('c3') as ChangeRecord).isSynced, isFalse);
+      expect((r.graph.getNodeData('c4') as ChangeRecord).isSynced, isFalse);
     });
   });
 }

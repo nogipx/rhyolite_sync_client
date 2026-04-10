@@ -6,7 +6,6 @@ import 'package:data_manage/data_manage.dart';
 import 'package:rhyolite_graph/rhyolite_graph.dart';
 import 'package:uuid/uuid.dart';
 
-import '../changes/file_change_event.dart';
 import '../changes/i_change_provider.dart';
 import '../local/local_blob_store.dart';
 import '../local/local_node_store.dart';
@@ -22,7 +21,7 @@ class FileHandlerContext {
   FileHandlerContext({
     required this.graph,
     required this.fileRegistry,
-    required this.pushUseCase,
+    this.pushUseCase,
     required this.nodeStore,
     required this.blobStore,
     required this.vaultPath,
@@ -32,7 +31,10 @@ class FileHandlerContext {
 
   final IGraphEditable<NodeRecord> graph;
   final FileRegistry fileRegistry;
-  final PushUseCase pushUseCase;
+
+  /// When null, push is skipped — the caller is responsible for syncing
+  /// (e.g. SyncBloc subscribes to vault:file_changed on the bus).
+  final PushUseCase? pushUseCase;
   final LocalNodeStore nodeStore;
   final LocalBlobStore blobStore;
   final String vaultPath;
@@ -51,7 +53,6 @@ class HandleFileCreated {
   final void Function(SyncEngineEvent) emit;
 
   Future<void> call(String relativePath) async {
-    emit(SyncFileCreated(relativePath));
     if (ctx.fileRegistry.fileIdByPath(relativePath) != null) {
       return HandleFileModified(ctx, emit).call(relativePath);
     }
@@ -67,7 +68,14 @@ class HandleFileCreated {
       final bytes = await ctx.io.readFile('${ctx.vaultPath}/$relativePath');
       final blobId = _sha256(bytes);
       await ctx.blobStore.write(bytes, blobId, vaultId: ctx.vaultId);
-      final changeRecord = RecordChangeUseCase(ctx.graph)(fileNode, blobId, bytes.length);
+      final changeRecord = RecordChangeUseCase(ctx.graph)(
+        fileNode,
+        blobId,
+        bytes.length,
+      );
+      ctx.graph.apply([changeRecord]);
+      _emitOrphaned(ctx.graph, fileNode, emit);
+      emit(SyncFileCreated(relativePath));
       await ctx.nodeStore.save(changeRecord);
       await _pushAndSync(fileNode, relativePath);
       return;
@@ -85,22 +93,29 @@ class HandleFileCreated {
     );
 
     final fileNode = FileNode(fileNodeKey);
-    ctx.graph.addNode(fileNode);
-    ctx.graph.addEdge(ctx.graph.root, fileNode);
-    ctx.graph.updateNodeData(fileNodeKey, fileRecord);
+    ctx.graph.apply([fileRecord]);
     ctx.fileRegistry.register(relativePath, fileId, fileNodeKey);
 
     final bytes = await ctx.io.readFile('${ctx.vaultPath}/$relativePath');
     final blobId = _sha256(bytes);
     await ctx.blobStore.write(bytes, blobId, vaultId: ctx.vaultId);
-    final changeRecord = RecordChangeUseCase(ctx.graph)(fileNode, blobId, bytes.length);
+    final changeRecord = RecordChangeUseCase(ctx.graph)(
+      fileNode,
+      blobId,
+      bytes.length,
+    );
+    ctx.graph.apply([changeRecord]);
+    PruneLeafBranchesUseCase(ctx.graph).call(fileNode);
+    emit(SyncFileCreated(relativePath));
     await ctx.nodeStore.saveAll([fileRecord, changeRecord]);
     await _pushAndSync(fileNode, relativePath);
   }
 
   Future<void> _pushAndSync(Node fileNode, String path) async {
+    if (ctx.pushUseCase == null) return;
     try {
-      await ctx.pushUseCase.call([fileNode]);
+      final synced = await ctx.pushUseCase!.call([fileNode]);
+      ctx.graph.markSynced(synced);
       emit(SyncFilePushed(path));
       await _markSynced(ctx, _collectSynced(ctx.graph, fileNode));
     } catch (e) {
@@ -116,7 +131,6 @@ class HandleFileModified {
   final void Function(SyncEngineEvent) emit;
 
   Future<void> call(String relativePath) async {
-    emit(SyncFileModified(relativePath));
     final fileId = ctx.fileRegistry.fileIdByPath(relativePath);
     if (fileId == null) return;
 
@@ -137,11 +151,20 @@ class HandleFileModified {
     if (currentBlobId == lastBlobId) return;
 
     await ctx.blobStore.write(bytes, currentBlobId, vaultId: ctx.vaultId);
-    final changeRecord = RecordChangeUseCase(ctx.graph)(fileNode, currentBlobId, bytes.length);
+    final changeRecord = RecordChangeUseCase(ctx.graph)(
+      fileNode,
+      currentBlobId,
+      bytes.length,
+    );
+    ctx.graph.apply([changeRecord]);
+    _emitOrphaned(ctx.graph, fileNode, emit);
+    emit(SyncFileModified(relativePath));
     await ctx.nodeStore.save(changeRecord);
 
+    if (ctx.pushUseCase == null) return;
     try {
-      await ctx.pushUseCase.call([fileNode]);
+      final synced = await ctx.pushUseCase!.call([fileNode]);
+      ctx.graph.markSynced(synced);
       emit(SyncFilePushed(relativePath));
       await _markSynced(ctx, _collectSynced(ctx.graph, fileNode));
     } catch (e) {
@@ -157,7 +180,6 @@ class HandleFileMoved {
   final void Function(SyncEngineEvent) emit;
 
   Future<void> call(String fromPath, String toPath) async {
-    emit(SyncFileMoved(fromPath: fromPath, toPath: toPath));
     final fileId = ctx.fileRegistry.fileIdByPath(fromPath);
     if (fileId == null) return;
 
@@ -167,11 +189,16 @@ class HandleFileMoved {
     if (fileNode == null) return;
 
     final moveRecord = RecordMoveUseCase(ctx.graph)(fileNode, fromPath, toPath);
+    ctx.graph.apply([moveRecord]);
+    _emitOrphaned(ctx.graph, fileNode, emit);
     ctx.fileRegistry.updatePath(fromPath, toPath);
+    emit(SyncFileMoved(fromPath: fromPath, toPath: toPath));
     await ctx.nodeStore.save(moveRecord);
 
+    if (ctx.pushUseCase == null) return;
     try {
-      await ctx.pushUseCase.call([fileNode]);
+      final synced = await ctx.pushUseCase!.call([fileNode]);
+      ctx.graph.markSynced(synced);
       emit(SyncFilePushed(toPath));
       await _markSynced(ctx, _collectSynced(ctx.graph, fileNode));
     } catch (e) {
@@ -187,7 +214,6 @@ class HandleFileDeleted {
   final void Function(SyncEngineEvent) emit;
 
   Future<void> call(String relativePath) async {
-    emit(SyncFileDeleted(relativePath));
     final fileId = ctx.fileRegistry.fileIdByPath(relativePath);
     if (fileId == null) return;
 
@@ -200,16 +226,21 @@ class HandleFileDeleted {
     if (ctx.graph.getNodeData(leaf.key) is DeleteRecord) return;
 
     final deleteRecord = RecordDeleteUseCase(ctx.graph)(fileNode);
-    ctx.fileRegistry.remove(relativePath);
+    ctx.graph.apply([deleteRecord]);
+    _emitOrphaned(ctx.graph, fileNode, emit);
+    emit(SyncFileDeleted(relativePath));
     await ctx.nodeStore.save(deleteRecord);
 
+    if (ctx.pushUseCase == null) return;
     try {
-      await ctx.pushUseCase.call([fileNode]);
+      final synced = await ctx.pushUseCase!.call([fileNode]);
+      ctx.graph.markSynced(synced);
       emit(SyncFilePushed(relativePath));
       await _markSynced(ctx, _collectSynced(ctx.graph, fileNode));
     } catch (e) {
       emit(SyncError('Push failed for delete $relativePath: $e'));
     }
+    ctx.fileRegistry.remove(relativePath);
   }
 }
 
@@ -315,6 +346,15 @@ class FileEventHandler {
 // ---------------------------------------------------------------------------
 // Shared helpers
 // ---------------------------------------------------------------------------
+
+void _emitOrphaned(
+  IGraphEditable<NodeRecord> graph,
+  Node fileNode,
+  void Function(SyncEngineEvent) emit,
+) {
+  final orphaned = PruneLeafBranchesUseCase(graph).call(fileNode);
+  if (orphaned.isNotEmpty) emit(SyncOrphanedNodes(orphaned));
+}
 
 List<NodeRecord> _collectSynced(IGraph<NodeRecord> graph, Node fileNode) {
   final result = <NodeRecord>[];

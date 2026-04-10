@@ -29,6 +29,7 @@ void Function() registerSettingsTab({
   required void Function(VaultConfig config, VaultCipher cipher) onVaultChanged,
   required void Function() onSubscribed,
   required Future<void> Function() onResetVault,
+  required Future<void> Function() onRepairVault,
 }) {
   // Mutable state captured by the builder closure — updated via callbacks.
   var currentConfig = config;
@@ -102,12 +103,13 @@ void Function() registerSettingsTab({
     );
 
     void addResetVaultButton(PluginSettingsTab t) => t.addButton(
-      name: 'Reset vault',
+      name: 'Reset vault history',
       description:
           'Wipe all sync history from the server and re-upload from disk. '
           'All connected clients will also reset. '
-          'Your files are not deleted.',
-      buttonText: 'Reset Vault',
+          'Your files are not deleted. '
+          'Use this only when you want a full server-side reset.',
+      buttonText: 'Reset History',
       onClick: () async {
         final vaultName = currentConfig.vaultName.isNotEmpty
             ? currentConfig.vaultName
@@ -118,6 +120,26 @@ void Function() registerSettingsTab({
         );
         if (!confirmed) return;
         await onResetVault();
+      },
+    );
+
+    void addRepairVaultButton(PluginSettingsTab t) => t.addButton(
+      name: 'Repair vault',
+      description:
+          'Prune non-canonical branches, run GC, and push the canonical '
+          'state back to the server. '
+          'This keeps the server history and only normalizes the active graph.',
+      buttonText: 'Repair Vault',
+      onClick: () async {
+        final vaultName = currentConfig.vaultName.isNotEmpty
+            ? currentConfig.vaultName
+            : currentConfig.vaultId;
+        final confirmed = await _showRepairConfirmation(
+          plugin,
+          vaultName: vaultName,
+        );
+        if (!confirmed) return;
+        await onRepairVault();
       },
     );
 
@@ -260,6 +282,7 @@ void Function() registerSettingsTab({
       if (currentConfig.vaultId.isNotEmpty) {
         addDisconnectVaultButton(t);
         addResetVaultButton(t);
+        addRepairVaultButton(t);
       } else {
         addConnectVaultButton(t);
       }
@@ -307,7 +330,7 @@ Future<bool> _showResetConfirmation(
   final confirmed = await showModalWith<bool>(
     plugin,
     build: (ctx) {
-      ctx.h3('Reset Vault?');
+      ctx.h3('Reset Vault History?');
       ctx.spaceVertical(px: 12);
       ctx.createEl('p', text: 'Reset sync history for "$vaultName"?');
       ctx.spaceVertical(px: 8);
@@ -315,16 +338,52 @@ Future<bool> _showResetConfirmation(
         'p',
         cls: 'rhyolite-setting-desc',
         text:
-            'All sync records will be wiped from the server. '
-            'Every connected client will re-upload from their disk. '
-            'Your files are not deleted.',
+          'All sync records will be wiped from the server. '
+          'Every connected client will re-upload from their disk. '
+          'Your files are not deleted.',
       );
       ctx.spaceVertical(px: 16);
       ctx.buttonRow([
         ButtonSpec(
-          'Reset',
+          'Reset History',
           () => ctx.close(true),
           variant: ButtonVariant.destructive,
+        ),
+        ButtonSpec('Cancel', () => ctx.close(false)),
+      ]);
+      ctx.onEscape(() => ctx.close(false));
+    },
+  );
+  return confirmed ?? false;
+}
+
+/// Asks the user to confirm repairing the vault history.
+Future<bool> _showRepairConfirmation(
+  PluginHandle plugin, {
+  required String vaultName,
+}) async {
+  final confirmed = await showModalWith<bool>(
+    plugin,
+    build: (ctx) {
+      ctx.h3('Repair Vault?');
+      ctx.spaceVertical(px: 12);
+      ctx.createEl('p', text: 'Repair sync history for "$vaultName"?');
+      ctx.spaceVertical(px: 8);
+      ctx.createEl(
+        'p',
+        cls: 'rhyolite-setting-desc',
+        text:
+            'This will prune non-canonical branches, run GC, and push the '
+            'canonical graph state back to the server. '
+            'The server history is not wiped outright, but older branches may '
+            'be detached from the active graph.',
+      );
+      ctx.spaceVertical(px: 16);
+      ctx.buttonRow([
+        ButtonSpec(
+          'Repair',
+          () => ctx.close(true),
+          variant: ButtonVariant.primary,
         ),
         ButtonSpec('Cancel', () => ctx.close(false)),
       ]);

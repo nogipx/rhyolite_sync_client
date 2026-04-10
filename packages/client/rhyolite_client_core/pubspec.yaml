@@ -9,6 +9,7 @@ environment:
   sdk: ^3.11.0
 
 dependencies:
+  bloc: ^9.2.0
   rhyolite_graph: any
   rhyolite_client_account: any
 

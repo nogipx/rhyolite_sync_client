@@ -149,6 +149,35 @@ class ReleaseLockResponse implements IRpcSerializable {
   Map<String, dynamic> toJson() => const {};
 }
 
+class RenewLockRequest implements IRpcSerializable {
+  const RenewLockRequest({required this.vaultId, required this.lockToken});
+
+  final String vaultId;
+  final String lockToken;
+
+  factory RenewLockRequest.fromJson(Map<String, dynamic> json) =>
+      RenewLockRequest(
+        vaultId: json['vaultId'] as String,
+        lockToken: json['lockToken'] as String,
+      );
+
+  @override
+  Map<String, dynamic> toJson() => {
+    'vaultId': vaultId,
+    'lockToken': lockToken,
+  };
+}
+
+class RenewLockResponse implements IRpcSerializable {
+  const RenewLockResponse();
+
+  factory RenewLockResponse.fromJson(Map<String, dynamic> _) =>
+      const RenewLockResponse();
+
+  @override
+  Map<String, dynamic> toJson() => const {};
+}
+
 class GetVaultEpochRequest implements IRpcSerializable {
   const GetVaultEpochRequest({required this.vaultId});
 
@@ -195,6 +224,32 @@ class ResetVaultResponse implements IRpcSerializable {
   Map<String, dynamic> toJson() => const {};
 }
 
+class DeleteNodesRequest implements IRpcSerializable {
+  const DeleteNodesRequest({required this.vaultId, required this.keys});
+
+  final String vaultId;
+  final List<String> keys;
+
+  factory DeleteNodesRequest.fromJson(Map<String, dynamic> json) =>
+      DeleteNodesRequest(
+        vaultId: json['vaultId'] as String,
+        keys: List<String>.from(json['keys'] as List),
+      );
+
+  @override
+  Map<String, dynamic> toJson() => {'vaultId': vaultId, 'keys': keys};
+}
+
+class DeleteNodesResponse implements IRpcSerializable {
+  const DeleteNodesResponse();
+
+  factory DeleteNodesResponse.fromJson(Map<String, dynamic> _) =>
+      const DeleteNodesResponse();
+
+  @override
+  Map<String, dynamic> toJson() => const {};
+}
+
 // --- Contract ---
 
 @RpcService(name: 'RhyoliteSync', transferMode: RpcDataTransferMode.codec)
@@ -217,6 +272,12 @@ abstract class ISyncContract {
     RpcContext? context,
   });
 
+  @RpcMethod.unary(name: 'renewLock')
+  Future<RenewLockResponse> renewLock(
+    RenewLockRequest request, {
+    RpcContext? context,
+  });
+
   @RpcMethod.unary(name: 'getVaultEpoch')
   Future<GetVaultEpochResponse> getVaultEpoch(
     GetVaultEpochRequest request, {
@@ -226,6 +287,12 @@ abstract class ISyncContract {
   @RpcMethod.unary(name: 'resetVault')
   Future<ResetVaultResponse> resetVault(
     ResetVaultRequest request, {
+    RpcContext? context,
+  });
+
+  @RpcMethod.unary(name: 'deleteNodes')
+  Future<DeleteNodesResponse> deleteNodes(
+    DeleteNodesRequest request, {
     RpcContext? context,
   });
 }

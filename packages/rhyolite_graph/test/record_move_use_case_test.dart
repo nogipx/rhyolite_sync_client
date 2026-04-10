@@ -5,15 +5,6 @@ import 'helpers.dart';
 
 void main() {
   group('RecordMoveUseCase', () {
-    test('adds MoveNode to graph after current leaf', () {
-      final r = buildStandardGraph();
-      RecordMoveUseCase(r.graph)(r.fileNode, '/old.md', '/new.md');
-
-      final leaf = r.graph.findLeaf(r.fileNode);
-      expect(r.graph.getNodeData(leaf.key), isA<MoveRecord>());
-      expect(r.graph.getNodeParent(leaf), equals(r.c4));
-    });
-
     test('returns MoveRecord with correct fields', () {
       final r = buildStandardGraph();
       final result = RecordMoveUseCase(r.graph)(r.fileNode, '/old.md', '/new.md');

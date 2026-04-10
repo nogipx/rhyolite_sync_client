@@ -5,17 +5,6 @@ import 'helpers.dart';
 
 void main() {
   group('RecordChangeUseCase', () {
-    test('adds ChangeNode to graph after current leaf', () {
-      final r = buildStandardGraph();
-      final useCase = RecordChangeUseCase(r.graph);
-
-      useCase(r.fileNode, 'blob5', 50);
-
-      final leaf = r.graph.findLeaf(r.fileNode);
-      expect(r.graph.getNodeData(leaf.key), isA<ChangeRecord>());
-      expect(r.graph.getNodeParent(leaf), equals(r.c4));
-    });
-
     test('returns ChangeRecord with correct fields', () {
       final r = buildStandardGraph();
       final result = RecordChangeUseCase(r.graph)(r.fileNode, 'blob5', 50);
@@ -51,9 +40,20 @@ void main() {
       final useCase = RecordChangeUseCase(r.graph);
 
       final first = useCase(r.fileNode, 'blob5', 10);
+      r.graph.apply([first]);
       final second = useCase(r.fileNode, 'blob6', 20);
 
       expect(second.parentKey, equals(first.key));
+    });
+
+    test('returns same record if called again before graph.apply', () {
+      final r = buildStandardGraph();
+      final useCase = RecordChangeUseCase(r.graph);
+
+      final first = useCase(r.fileNode, 'blob5', 10);
+      final second = useCase(r.fileNode, 'blob5', 10);
+
+      expect(second.key, equals(first.key));
     });
   });
 }

@@ -96,6 +96,13 @@ class ObsidianIO implements IPlatformIO {
     }
   }
 
+  @override
+  Future<FileStatInfo?> statFile(String path) async {
+    final file = _vault.getFileByPath(_rel(path));
+    if (file == null) return null;
+    return FileStatInfo(mtimeMs: file.stat.mtime, sizeBytes: file.stat.size);
+  }
+
   Future<void> _ensureParentDir(String filePath) async {
     final slashIdx = filePath.lastIndexOf('/');
     if (slashIdx <= 0) return;

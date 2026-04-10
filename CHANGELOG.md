@@ -1,3 +1,36 @@
+## [1.2.0] - 2026-04-10
+
+### Features
+
+- add vault repair flow (obsidian)
+- add server timestamp for deterministic leaf ordering (graph)
+- add deleteNodes RPC to remove orphaned nodes from server (core)
+- prune side branches on startup for all files (core)
+- rewrite sync client as three BLoCs with in-process bus (core)
+
+### Bug Fixes
+
+- notify and retry when vault lock is released (core)
+- add lease lock to sync flow (core)
+- prune all file nodes from graph on startup, not just registry (core)
+- push delete record before removing from file registry (core)
+- two-pass apply to handle out-of-order records from server (graph)
+- two-pass graph build to handle out-of-order records (core)
+- in-process notify bus calls (core)
+- handle missing blobs gracefully instead of null crash (core)
+
+### Refactoring
+
+- replace SyncEngine internals with BLoC facade (core)
+- file change event merge files (core)
+- make use cases pure — graph mutated only via apply/markSynced (graph)
+
+### Other
+
+- add token bucket rate limiter for outbound RPC calls (core)
+- optimize large vault startup and sync (core)
+
+
 ## [1.1.1] - 2026-04-07
 
 ### Other
