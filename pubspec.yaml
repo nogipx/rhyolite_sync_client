@@ -1,4 +1,4 @@
-x-rpc-ref: &rpc-ref rpc_notify-1.1.0
+x-rpc-ref: &rpc-ref rpc_blob-1.2.0
 
 name: rhyolite_sync_plugin
 publish_to: none

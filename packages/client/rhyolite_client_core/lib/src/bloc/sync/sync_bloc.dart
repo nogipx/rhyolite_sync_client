@@ -370,7 +370,9 @@ class SyncBloc extends Bloc<SyncBlocEvent, SyncBlocState> {
             toWrite.add(r);
           }
         }
-        if (toWrite.isNotEmpty) await _diskApplier!.call(toWrite);
+        if (toWrite.isNotEmpty) {
+          await _diskApplier!.call(_compactDiskRecords(toWrite));
+        }
       }
     } catch (e) {
       final r = _fatalReason(e);
@@ -620,7 +622,7 @@ class SyncBloc extends Bloc<SyncBlocEvent, SyncBlocState> {
           localLeaf,
           result.nodes,
         );
-        await _diskApplier!.call(resolution.recordsForDisk);
+        await _diskApplier!.call(_compactDiskRecords(resolution.recordsForDisk));
         await v.nodeStore.saveAll([
           ...result.nodes,
           ...resolution.newLocalRecords,
@@ -787,6 +789,25 @@ class SyncBloc extends Bloc<SyncBlocEvent, SyncBlocState> {
       final leafRecord = v.graph.getNodeData(leaf.key);
       return leafRecord != null && !leafRecord.isSynced;
     }).toList();
+  }
+
+  List<NodeRecord> _compactDiskRecords(List<NodeRecord> records) {
+    final sorted = [...records]..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    final lastChangeByFileId = <String, ChangeRecord>{};
+    final compacted = <NodeRecord>[];
+
+    for (final record in sorted) {
+      switch (record) {
+        case ChangeRecord():
+          lastChangeByFileId[record.fileId] = record;
+        default:
+          compacted.add(record);
+      }
+    }
+
+    compacted.addAll(lastChangeByFileId.values);
+    compacted.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    return compacted;
   }
 
   Set<String> _extractFileIds(List<NodeRecord> records) {

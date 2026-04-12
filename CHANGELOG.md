@@ -1,3 +1,10 @@
+## [1.2.1] - 2026-04-13
+
+### Features
+
+- storage quota + streaming blob upload/download (core)
+
+
 ## [1.2.0] - 2026-04-10
 
 ### Features

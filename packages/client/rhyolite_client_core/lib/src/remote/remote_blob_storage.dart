@@ -83,6 +83,7 @@ class RemoteBlobStorage implements IBlobStorage {
         last: end == bytes.length,
         blobId: first ? blobId : null,
         vaultId: first ? vaultId : null,
+        totalLength: first ? bytes.length : null,
       );
       offset = end;
       first = false;

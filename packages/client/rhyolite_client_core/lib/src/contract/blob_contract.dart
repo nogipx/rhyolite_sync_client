@@ -15,6 +15,7 @@ class BlobChunk implements IRpcSerializable {
     required this.last,
     this.blobId,
     this.vaultId,
+    this.totalLength,
   });
 
   final Uint8List bytes;
@@ -27,12 +28,16 @@ class BlobChunk implements IRpcSerializable {
   /// Only set in the first chunk of an upload.
   final String? vaultId;
 
+  /// Total byte size of the blob. Only set in the first chunk of an upload.
+  final int? totalLength;
+
   factory BlobChunk.fromJson(Map<String, dynamic> json) => BlobChunk(
     bytes: Uint8List.fromList((json['bytes'] as List).cast<int>()),
     offset: json['offset'] as int,
     last: json['last'] as bool,
     blobId: json['blobId'] as String?,
     vaultId: json['vaultId'] as String?,
+    totalLength: json['totalLength'] as int?,
   );
 
   @override
@@ -42,6 +47,7 @@ class BlobChunk implements IRpcSerializable {
     'last': last,
     if (blobId != null) 'blobId': blobId,
     if (vaultId != null) 'vaultId': vaultId,
+    if (totalLength != null) 'totalLength': totalLength,
   };
 }
 
